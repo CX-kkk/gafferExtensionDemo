@@ -43,65 +43,63 @@ import Gaffer
 ## Creates a custom Gaffer extension to locate all
 # the source files that might be relevant to a given
 # output TaskPlug.
-def retrive_relevant_files(plug):
-    def traverse_nodes(node, upstream_nodes, source_files):
+def retriveRelevantFiles(plug):
+    def traverseNodes(node, upstreamNodes, sourceFiles):
         """ Traverse nodes to collect values from "fileName" attribute.
 
         :param node: plug/node instance
         """
         # traverse input plug
-        for source_plug_t in node.children(Gaffer.Plug):
+        for sourcePlug in node.children(Gaffer.Plug):
             # get input plugs from current node
-            if source_plug_t.direction() != Gaffer.Plug.Direction.In:
+            if sourcePlug.direction() != Gaffer.Plug.Direction.In:
                 continue
 
             # Get source file from fileName
-            if source_plug_t.children():
-                for c_plug in source_plug_t.children():
-                    traverse_nodes(c_plug, upstream_nodes, source_files)
-            elif source_plug_t.getName() == 'fileName':
-                if source_plug_t.getName() not in source_files:
-                    source_file = get_full_path(source_plug_t.getValue())
-                    source_files.add(os.path.expandvars(source_file))
+            if sourcePlug.children():
+                for cPlug in sourcePlug.children():
+                    traverseNodes(cPlug, upstreamNodes, sourceFiles)
+            elif sourcePlug.getName() == 'fileName':
+                if sourcePlug.getName() not in sourceFiles:
+                    sourceFile = getFullPath(sourcePlug.getValue())
+                    sourceFiles.add(os.path.expandvars(sourceFile))
 
             # Get upstream nodes
-            if source_plug_t.getInput():
-                up_node = source_plug_t.source().parent()
-                if up_node not in upstream_nodes:
-                    upstream_nodes.append(up_node)
-                    traverse_nodes(up_node, upstream_nodes, source_files)
+            if sourcePlug.getInput():
+                upNode = sourcePlug.source().parent()
+                if upNode not in upstreamNodes:
+                    upstreamNodes.append(upNode)
+                    traverseNodes(upNode, upstreamNodes, sourceFiles)
             else:
-                traverse_nodes(source_plug_t, upstream_nodes, source_files)
+                traverseNodes(sourcePlug, upstreamNodes, sourceFiles)
 
-    upstream_node = plug.getInput().node()
+    upstreamNode = plug.getInput().node()
     # Save all upstream node, for checking purpose if we
     # collected all upsteam nodes
-    upstream_nodes = [upstream_node]
-    source_files = set()
+    upstreamNodes = [upstreamNode]
+    sourceFiles = set()
 
-    # collect source_files
-    traverse_nodes(upstream_node, upstream_nodes, source_files)
-    return source_files
+    # collect source files
+    traverseNodes(upstreamNode, upstreamNodes, sourceFiles)
+    return sourceFiles
 
 
-def get_full_path(source_file, skip_variables=None):
-    skip_variables = skip_variables if skip_variables else []
+def getFullPath(sourceFile, skipVariables=None):
+    skipVariables = skipVariables if skipVariables else []
     pattern = re.compile(r'[$][{](.*?)[}]', re.S)
-    script_variables = re.findall(pattern, source_file)
-    if not script_variables:
-        return source_file
-    for script_v in script_variables:
-        if script_v in skip_variables:
+    scriptVariables = re.findall(pattern, sourceFile)
+    if not scriptVariables:
+        return sourceFile
+    for scriptV in scriptVariables:
+        if scriptV in skipVariables:
             continue
         # TODO: There should be a better way to get all values from script variables
         try:
-            script_v_value = root.context()[script_v]
+            scriptVariableValue = root.context()[scriptV]
         except:
-            skip_variables.append(script_v)
-            script_v_value = '${{{}}}'.format(script_v)
+            skipVariables.append(scriptV)
+            scriptVariableValue = '${{{}}}'.format(scriptV)
 
-        dir_without_script_v = source_file.replace('${{{}}}'.format(script_v), script_v_value)
-        return get_full_path(dir_without_script_v, skip_variables)
-    return source_file
-
-
+        pathWithoutScriptV = sourceFile.replace('${{{}}}'.format(scriptV), scriptVariableValue)
+        return getFullPath(pathWithoutScriptV, skipVariables)
+    return sourceFile
